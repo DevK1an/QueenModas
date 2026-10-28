@@ -4,16 +4,20 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "optimize:images": "node scripts/optimize-images.mjs",
+    "predev": "npm run optimize:images",
     "dev": "vite",
+    "prebuild": "npm run optimize:images",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "vite": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "vite": "latest"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "latest"
+    "@vitejs/plugin-react": "latest",
+    "sharp": "0.35.5"
   }
 }

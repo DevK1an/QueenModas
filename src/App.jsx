@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { products } from './data/products.js';
 import ProductGallery from './ProductGallery.jsx';
+import { imageSource, preloadColorImages } from './productImages.js';
 
 function Icon({ name, size = 20 }) {
   const paths = {
@@ -115,10 +116,16 @@ function ProductCard({ product, items, onAdd }) {
                 aria-label={`${color.name}, ${color.stock == null ? 'disponibilidade a confirmar' : `${color.stock} unidades disponíveis`}`}
                 aria-pressed={selectedColor.name === color.name}
                 onPointerEnter={(event) => {
-                  if (event.pointerType === 'mouse') setPreviewColor(color);
+                  if (event.pointerType === 'mouse') {
+                    void preloadColorImages(product, color);
+                    setPreviewColor(color);
+                  }
                 }}
                 onPointerLeave={() => setPreviewColor(null)}
-                onFocus={() => setPreviewColor(color)}
+                onFocus={() => {
+                  void preloadColorImages(product, color);
+                  setPreviewColor(color);
+                }}
                 onBlur={() => setPreviewColor(null)}
                 onClick={() => {
                   setSelectedColor(color);
@@ -245,7 +252,15 @@ function CartDrawer({ items, onClose, onQuantityChange, onRemove }) {
             <div className="cart-list">
               {items.map((item) => (
                 <article className="cart-item" key={JSON.stringify([item.id, item.color, item.size])}>
-                  <img src={item.image} alt={item.imageAlt} />
+                  <img
+                    src={imageSource(item.image)}
+                    alt={item.imageAlt}
+                    onError={(event) => {
+                      if (event.currentTarget.getAttribute('src') !== item.image) {
+                        event.currentTarget.src = item.image;
+                      }
+                    }}
+                  />
                   <div className="cart-item-details">
                     <div className="cart-item-title">
                       <div>
@@ -448,7 +463,10 @@ export default function App() {
           </div>
           <div className="results-caption">
             <span>{filteredProducts.length} {filteredProducts.length === 1 ? 'peça encontrada' : 'peças para descobrir'}</span>
-            <span className="results-detail">ESCOLHA A COR · PASSE O MOUSE NA FOTO PARA VER O VERSO</span>
+            <span className="results-detail">
+              <span className="desktop-photo-hint">ESCOLHA A COR · PASSE O MOUSE NA FOTO PARA VER O VERSO</span>
+              <span className="mobile-photo-hint">TOQUE NA COR · VEJA FRENTE E VERSO</span>
+            </span>
           </div>
           {filteredProducts.length > 0 ? (
             <div className="product-grid">

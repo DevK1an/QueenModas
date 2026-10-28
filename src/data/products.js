@@ -68,8 +68,8 @@ export const products = [
         stock: 1,
         sizes: ['G'],
         images: {
-          front: '/roupas/vestido_04_vermelho_frente.png',
-          back: '/roupas/vestido_04_vermelho_verso.png',
+          front: '/roupas/vestido_03_vermelho_frente.png',
+          back: '/roupas/vestido_03_vermelho_verso.png',
         },
       },
     ],

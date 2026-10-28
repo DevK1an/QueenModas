@@ -66,6 +66,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .sort-field > svg { position: absolute; right: 0; pointer-events: none; }
 .results-caption { display: flex; justify-content: space-between; margin: 17px 0 21px; color: #77766e; font-size: 10px; }
 .results-detail { max-width: 55%; text-align: right; font-size: 8px; letter-spacing: 1px; line-height: 1.5; }
+.mobile-photo-hint { display: none; }
 .product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px 19px; }
 .product-card { min-width: 0; }
 .product-image-wrap { position: relative; display: grid; place-items: center; aspect-ratio: 3 / 5.5; overflow: hidden; background: var(--pink-soft); }
@@ -161,36 +162,45 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .main-nav { display: none; }
   .bag-label { display: none; }
   .bag-button { gap: 0; }
-  .collection-section { padding: 24px 6% 48px; }
+  .collection-section { padding: 24px 12px 48px; }
   .catalog-toolbar { align-items: flex-start; flex-direction: column; gap: 12px; }
   .search-field { width: min(55%, 240px); }
   .sort-label { display: none; }
   .results-caption { margin: 14px 0 17px; }
   .results-detail { font-size: 7px; letter-spacing: .55px; }
-  .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 25px 12px; }
-  .product-info { padding-top: 11px; }
-  .product-heading h3 { font-size: 15px; }
-  .product-price { padding-top: 11px; font-size: 10px; }
+  .desktop-photo-hint { display: none; }
+  .mobile-photo-hint { display: inline; }
+  .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 10px; align-items: stretch; }
+  .product-card { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fffdfd; }
+  .product-image-wrap { aspect-ratio: 3 / 5; }
+  .gallery-controls { gap: 6px; margin: 8px 8px 0; }
+  .gallery-controls button { min-height: 32px; font-size: 10px; }
+  .gallery-caption { min-height: 22px; margin: 6px 8px 0; text-align: center; line-height: 1.45; }
+  .product-info { flex: 1; display: flex; flex-direction: column; padding: 10px 8px 8px; }
+  .product-heading { display: flex; flex-direction: column; align-items: stretch; gap: 5px; }
+  .product-heading h3 { min-height: 2.7em; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+  .product-price { padding-top: 0; font-size: 12px; line-height: 1.4; font-weight: 500; }
   .product-category { font-size: 7px; }
-  .color-row { gap: 6px; margin-top: 6px; }
-  .swatches { gap: 5px; }
-  .swatch { width: 14px; height: 14px; }
-  .color-name { font-size: 8px; }
-  .product-bottom { margin: 7px 0 9px; }
-  .stock-note { font-size: 8px; }
-  .quantity-control { height: 27px; }
-  .quantity-control button { width: 23px; height: 25px; }
-  .quantity-control > span { min-width: 16px; font-size: 9px; }
-  .add-button { padding: 10px 8px; font-size: 9px; }
+  .color-row { min-height: 34px; gap: 7px; margin-top: 6px; }
+  .swatches { gap: 7px; }
+  .swatch { width: 20px; height: 20px; }
+  .color-name { font-size: 10px; }
+  .size-row { min-height: 38px; }
+  .size-field { gap: 6px; }
+  .size-field select { min-height: 34px; padding: 6px 4px; font-size: 12px; }
+  .product-bottom { flex-direction: column; align-items: flex-start; justify-content: center; min-height: 56px; gap: 6px; margin: 8px 0; }
+  .stock-note { min-height: 13px; font-size: 9px; line-height: 1.4; }
+  .quantity-control { height: 30px; }
+  .quantity-control button { width: 28px; height: 28px; }
+  .quantity-control > span { min-width: 18px; font-size: 10px; }
+  .add-button { min-height: 46px; gap: 5px; margin-top: auto; padding: 9px 7px; text-align: left; font-size: 10px; line-height: 1.35; }
+  .add-button span { min-width: 0; overflow-wrap: anywhere; }
+  .add-button svg { flex-shrink: 0; }
   .site-footer { flex-wrap: wrap; min-height: 106px; gap: 7px 10px; padding: 19px 6%; }
   .footer-brand { font-size: 17px; }
   .site-footer > span { flex-basis: 100%; font-size: 8px; }
   .cart-drawer { padding: 24px 20px 18px; }
 }
 @media (max-width: 390px) {
-  .product-heading { display: block; }
-  .product-price { display: block; padding-top: 4px; }
-  .product-bottom { gap: 4px; }
-  .stock-note { font-size: 7px; }
   .results-detail { max-width: 145px; text-align: right; line-height: 1.5; }
 }

@@ -68,3 +68,9 @@ Em cada cor, preencha `images.front` e `images.back` com as URLs das fotos reais
 Ao passar o mouse pela foto, aparece o verso da cor escolhida; ao sair, volta a frente. Os botões abaixo da imagem também permitem trocar de lado por toque ou teclado. Passar o mouse sobre uma bolinha mostra uma prévia daquela cor; clicar confirma a cor para a seleção pelo WhatsApp.
 
 Todas as cores cadastradas têm fotos de frente e verso. Ao adicionar novas cores, sem uma foto de frente por cor aparece a foto de referência; sem uma foto de verso, o botão “Verso” fica desabilitado. As fotos não são espelhadas nem recoloridas para simular outras vistas. Respeite as letras maiúsculas e minúsculas dos nomes dos arquivos ao preencher os caminhos.
+
+## Carregamento das fotos
+
+As fotos PNG em `public/roupas/` recebem cópias WebP mais leves, sem mudar suas dimensões. A otimização roda automaticamente em `npm run dev` e `npm run build`; também pode ser executada com `npm run optimize:images`. Com o servidor de desenvolvimento aberto, novos PNGs e alterações nos existentes também geram as cópias automaticamente.
+
+Continue indicando os arquivos originais em `products.js`. A galeria e a seleção usam as versões `.optimized.webp` quando disponíveis, com retorno ao original em caso de erro. Essas cópias são geradas novamente no build e não precisam ser enviadas ao GitHub. As outras cores e os versos são antecipados quando o card se aproxima da tela, para reduzir a espera ao trocar de foto.
