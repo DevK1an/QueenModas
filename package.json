@@ -6,7 +6,7 @@
   "scripts": {
     "optimize:images": "node scripts/optimize-images.mjs",
     "predev": "npm run optimize:images",
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
     "prebuild": "npm run optimize:images",
     "build": "vite build",
     "preview": "vite preview"

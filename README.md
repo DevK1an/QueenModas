@@ -13,6 +13,26 @@ npm run dev
 
 Para gerar a versão de produção, use `npm run build`.
 
+## Publicar na Cloudflare com Workers
+
+Se o painel mostrar os campos **Build command** e **Deploy command**, configure:
+
+- **Build command:** `npm run build`
+- **Deploy command:** `npx wrangler deploy`
+- **Root directory:** a raiz do repositório, onde está `package.json`.
+
+Envie também `wrangler.jsonc` ao GitHub. Ele informa ao Wrangler a data de compatibilidade e a pasta `dist`, com os arquivos estáticos já gerados pelo Vite. Isso evita a configuração automática que pode falhar ao tentar ler `vite.config.js`. Não use `public/` como pasta de publicação: ela não contém a aplicação compilada.
+
+Após salvar a configuração, execute uma nova publicação. Esse fluxo é o de Workers; o nome da seção “Workers & Pages” no painel também inclui projetos Pages, que usam a configuração abaixo.
+
+Referência: [comandos de build e publicação do Workers](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/).
+
+## Publicar no Cloudflare Pages
+
+Conecte o repositório e configure o comando de build como `npm run build`, a pasta de saída como `dist` e a pasta raiz como a raiz deste projeto, onde está `package.json`.
+
+Envie ao GitHub também `scripts/`, `package-lock.json` e as fotos originais de `public/roupas/`. O build gera automaticamente as versões leves das imagens. A configuração `vite.config.js` contém apenas o plugin React; a observação das fotos durante o desenvolvimento fica em `scripts/dev.mjs`.
+
 ## Configurar o WhatsApp
 
 O site já usa o número `+55 (61) 99516-6613` como destino dos pedidos. Para trocar o contato, copie `.env.example` para `.env` e preencha `VITE_WHATSAPP_NUMBER` com o número comercial, incluindo o código do país e apenas números:
