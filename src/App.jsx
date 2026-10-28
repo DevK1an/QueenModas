@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { categories, products } from './data/products.js';
+import { products } from './data/products.js';
+import ProductGallery from './ProductGallery.jsx';
 
 function Icon({ name, size = 20 }) {
   const paths = {
@@ -19,9 +20,6 @@ function Icon({ name, size = 20 }) {
     plus: <path d="M12 5v14m-7-7h14" />,
     minus: <path d="M5 12h14" />,
     arrow: <path d="M7 17 17 7M7 7h10v10" />,
-    heart: (
-      <path d="M20.8 8.6c0 4.1-8.8 10-8.8 10s-8.8-5.9-8.8-10A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.2Z" />
-    ),
     whatsapp: (
       <>
         <path d="M20.4 11.7a8.4 8.4 0 0 1-12.4 7.4L3.5 20l.9-4.4a8.4 8.4 0 1 1 16-3.9Z" />
@@ -49,36 +47,55 @@ function Icon({ name, size = 20 }) {
 }
 
 function formatPrice(price) {
+  if (!Number.isFinite(price)) return 'A consultar';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   }).format(price);
 }
 
-function ProductCard({ product, onAdd }) {
+function itemTotal(item) {
+  return Number.isFinite(item.price) ? item.price * item.quantity : null;
+}
+
+function colorQuantity(items, id, color) {
+  return items.reduce(
+    (sum, item) => sum + (item.id === id && item.color === color ? item.quantity : 0),
+    0,
+  );
+}
+
+function matchesVariant(item, id, color, size) {
+  return item.id === id && item.color === color && item.size === size;
+}
+
+function cartQuantityLimit(items, item) {
+  if (item.stock == null) return Infinity;
+  const otherQuantity = colorQuantity(items, item.id, item.color) - item.quantity;
+  return Math.max(1, item.stock - otherQuantity);
+}
+
+function ProductCard({ product, items, onAdd }) {
   const [selectedColor, setSelectedColor] = useState(product.colors[0]);
-  const [quantity, setQuantity] = useState(1);
-  const stock = selectedColor.stock;
+  const [previewColor, setPreviewColor] = useState(null);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [requestedQuantity, setQuantity] = useState(1);
+  const displayedColor = previewColor || selectedColor;
+  const sizes = selectedColor.sizes || [];
+  const needsSize = sizes.length > 0 && !sizes.includes(selectedSize);
+  const stock = selectedColor.stock == null
+    ? null
+    : Math.max(0, selectedColor.stock - colorQuantity(items, product.id, selectedColor.name));
+  const quantityLimit = stock ?? Infinity;
+  const quantity = Math.min(requestedQuantity, Math.max(1, quantityLimit));
 
   return (
     <article className="product-card">
-      <div className="product-image-wrap">
-        <img
-          className="product-image"
-          src={product.image}
-          alt={product.imageAlt}
-          loading="lazy"
-        />
-        {product.tag && <span className="product-tag">{product.tag}</span>}
-        <button
-          type="button"
-          className="favorite-button"
-          aria-label={`Adicionar ${product.name} aos favoritos`}
-          onClick={(event) => event.currentTarget.classList.toggle('is-favorite')}
-        >
-          <Icon name="heart" size={18} />
-        </button>
-      </div>
+      <ProductGallery
+        key={displayedColor.name}
+        product={product}
+        color={displayedColor}
+      />
       <div className="product-info">
         <div className="product-heading">
           <div>
@@ -95,16 +112,44 @@ function ProductCard({ product, onAdd }) {
                 type="button"
                 className={`swatch ${selectedColor.name === color.name ? 'is-selected' : ''}`}
                 style={{ '--swatch-color': color.hex }}
-                aria-label={`${color.name}, ${color.stock} unidades disponíveis`}
+                aria-label={`${color.name}, ${color.stock == null ? 'disponibilidade a confirmar' : `${color.stock} unidades disponíveis`}`}
                 aria-pressed={selectedColor.name === color.name}
+                onPointerEnter={(event) => {
+                  if (event.pointerType === 'mouse') setPreviewColor(color);
+                }}
+                onPointerLeave={() => setPreviewColor(null)}
+                onFocus={() => setPreviewColor(color)}
+                onBlur={() => setPreviewColor(null)}
                 onClick={() => {
                   setSelectedColor(color);
+                  setPreviewColor(null);
+                  setSelectedSize('');
                   setQuantity(1);
                 }}
               />
             ))}
           </div>
-          <span className="color-name">{selectedColor.name}</span>
+          <span className="color-name">{displayedColor.name}</span>
+        </div>
+        <div className="size-row">
+          {sizes.length > 0 ? (
+            <label className="size-field">
+              <span>Tamanho</span>
+              <select
+                aria-label={`Tamanho de ${product.name}`}
+                value={selectedSize}
+                onChange={(event) => {
+                  setSelectedSize(event.target.value);
+                  setQuantity(1);
+                }}
+              >
+                <option value="">Escolha</option>
+                {sizes.map((size) => <option key={size} value={size}>{size}</option>)}
+              </select>
+            </label>
+          ) : (
+            <span className="size-note">Tamanho a confirmar</span>
+          )}
         </div>
         <div className="product-bottom">
           <div className="quantity-control" aria-label="Quantidade">
@@ -112,7 +157,7 @@ function ProductCard({ product, onAdd }) {
               type="button"
               aria-label="Diminuir quantidade"
               disabled={quantity <= 1}
-              onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
             >
               <Icon name="minus" size={15} />
             </button>
@@ -120,22 +165,23 @@ function ProductCard({ product, onAdd }) {
             <button
               type="button"
               aria-label="Aumentar quantidade"
-              disabled={quantity >= stock}
-              onClick={() => setQuantity((value) => Math.min(stock, value + 1))}
+              disabled={quantity >= quantityLimit}
+              onClick={() => setQuantity(Math.min(quantityLimit, quantity + 1))}
             >
               <Icon name="plus" size={15} />
             </button>
           </div>
-          <span className={`stock-note ${stock < 3 ? 'is-low' : ''}`}>
-            {stock < 3 ? `Só ${stock} no mostruário` : `${stock} disponíveis`}
+          <span className={`stock-note ${stock != null && stock < 3 ? 'is-low' : ''}`}>
+            {stock == null ? 'A confirmar' : stock === 0 ? (selectedColor.stock === 0 ? 'Esgotado' : 'Já na seleção') : stock < 3 ? `Só ${stock} no mostruário` : `${stock} disponíveis`}
           </span>
         </div>
         <button
           className="add-button"
           type="button"
-          onClick={() => onAdd(product, selectedColor, quantity)}
+          disabled={stock === 0 || needsSize}
+          onClick={() => onAdd(product, selectedColor, selectedSize || null, quantity)}
         >
-          <span>Separar pelo WhatsApp</span>
+          <span>{stock === 0 ? (selectedColor.stock === 0 ? 'Indisponível' : 'Já na seleção') : needsSize ? 'Selecione o tamanho' : 'Separar pelo WhatsApp'}</span>
           <Icon name="arrow" size={17} />
         </button>
       </div>
@@ -144,26 +190,28 @@ function ProductCard({ product, onAdd }) {
 }
 
 function CartDrawer({ items, onClose, onQuantityChange, onRemove }) {
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = items.every((item) => Number.isFinite(item.price))
+    ? items.reduce((sum, item) => sum + itemTotal(item), 0)
+    : null;
 
   function sendWhatsAppRequest() {
-    const phone = (import.meta.env.VITE_WHATSAPP_NUMBER || '').replace(/\D/g, '');
+    const phone = (import.meta.env.VITE_WHATSAPP_NUMBER?.trim() || '5561995166613').replace(/\D/g, '');
     const lines = items.map(
       (item) =>
-        `• ${item.name} — ${item.color} — ${item.quantity} un. (${formatPrice(item.price * item.quantity)})`,
+        `• ${item.name} — ${item.color} — Tamanho ${item.size || 'a confirmar'} — ${item.quantity} un. (${formatPrice(itemTotal(item))})`,
     );
     const message = [
-      'Oi! Quero pedir para separar estas peças:',
+      items.length === 1
+        ? 'Oi, queenmodas! Gostaria de pedir para separar este vestido:'
+        : 'Oi, queenmodas! Gostaria de pedir para separar estes vestidos:',
       '',
       ...lines,
       '',
-      `Total das peças: ${formatPrice(total)}`,
+      total == null ? 'Total a confirmar pelo WhatsApp.' : `Total das peças: ${formatPrice(total)}`,
       '',
       'Pode me confirmar a disponibilidade?',
     ].join('\n');
-    const url = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
@@ -196,19 +244,19 @@ function CartDrawer({ items, onClose, onQuantityChange, onRemove }) {
           <>
             <div className="cart-list">
               {items.map((item) => (
-                <article className="cart-item" key={`${item.id}-${item.color}`}>
+                <article className="cart-item" key={JSON.stringify([item.id, item.color, item.size])}>
                   <img src={item.image} alt={item.imageAlt} />
                   <div className="cart-item-details">
                     <div className="cart-item-title">
                       <div>
                         <h3>{item.name}</h3>
-                        <p>{item.color}</p>
+                        <p>{item.color} · Tamanho {item.size || 'a confirmar'}</p>
                       </div>
                       <button
                         type="button"
                         className="remove-button"
-                        aria-label={`Remover ${item.name}`}
-                        onClick={() => onRemove(item.id, item.color)}
+                        aria-label={`Remover ${item.name}, ${item.color}, tamanho ${item.size || 'a confirmar'}`}
+                        onClick={() => onRemove(item.id, item.color, item.size)}
                       >
                         <Icon name="close" size={16} />
                       </button>
@@ -220,7 +268,7 @@ function CartDrawer({ items, onClose, onQuantityChange, onRemove }) {
                           aria-label="Diminuir quantidade"
                           disabled={item.quantity <= 1}
                           onClick={() =>
-                            onQuantityChange(item.id, item.color, item.quantity - 1)
+                            onQuantityChange(item.id, item.color, item.size, item.quantity - 1)
                           }
                         >
                           <Icon name="minus" size={14} />
@@ -229,15 +277,15 @@ function CartDrawer({ items, onClose, onQuantityChange, onRemove }) {
                         <button
                           type="button"
                           aria-label="Aumentar quantidade"
-                          disabled={item.quantity >= item.stock}
+                          disabled={item.quantity >= cartQuantityLimit(items, item)}
                           onClick={() =>
-                            onQuantityChange(item.id, item.color, item.quantity + 1)
+                            onQuantityChange(item.id, item.color, item.size, item.quantity + 1)
                           }
                         >
                           <Icon name="plus" size={14} />
                         </button>
                       </div>
-                      <strong>{formatPrice(item.price * item.quantity)}</strong>
+                      <strong>{formatPrice(itemTotal(item))}</strong>
                     </div>
                   </div>
                 </article>
@@ -266,7 +314,6 @@ function CartDrawer({ items, onClose, onQuantityChange, onRemove }) {
 }
 
 export default function App() {
-  const [activeCategory, setActiveCategory] = useState(categories[0]);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('destaques');
   const [cart, setCart] = useState([]);
@@ -274,79 +321,86 @@ export default function App() {
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase('pt-BR');
-    const filtered = products.filter((product) => {
-      const matchesCategory =
-        activeCategory === 'Todas as peças' || product.category === activeCategory;
-      const matchesSearch =
-        !normalizedSearch ||
-        `${product.name} ${product.category} ${product.colors.map((color) => color.name).join(' ')}`
-          .toLocaleLowerCase('pt-BR')
-          .includes(normalizedSearch);
-      return matchesCategory && matchesSearch;
-    });
+    const filtered = products.filter((product) =>
+      !normalizedSearch ||
+      `${product.name} ${product.category} ${product.colors.map((color) => color.name).join(' ')}`
+        .toLocaleLowerCase('pt-BR')
+        .includes(normalizedSearch),
+    );
 
-    if (sortBy === 'menor-preco') return filtered.sort((a, b) => a.price - b.price);
-    if (sortBy === 'maior-preco') return filtered.sort((a, b) => b.price - a.price);
+    if (sortBy !== 'destaques') {
+      return filtered.sort((a, b) => {
+        const aHasPrice = Number.isFinite(a.price);
+        const bHasPrice = Number.isFinite(b.price);
+        if (!aHasPrice || !bHasPrice) return Number(bHasPrice) - Number(aHasPrice);
+        return sortBy === 'menor-preco' ? a.price - b.price : b.price - a.price;
+      });
+    }
     return filtered;
-  }, [activeCategory, search, sortBy]);
+  }, [search, sortBy]);
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  function addToCart(product, color, quantity) {
+  function addToCart(product, color, size, quantity) {
+    if (color.sizes?.length && !color.sizes.includes(size)) return;
     setCart((current) => {
+      const remaining = color.stock == null
+        ? Infinity
+        : Math.max(0, color.stock - colorQuantity(current, product.id, color.name));
+      if (remaining === 0) return current;
+      const addedQuantity = Math.min(remaining, quantity);
       const existing = current.find(
-        (item) => item.id === product.id && item.color === color.name,
+        (item) => matchesVariant(item, product.id, color.name, size),
       );
       if (!existing) {
         return [
           ...current,
           {
             ...product,
+            image: color.images?.front || product.image,
+            imageAlt: color.images?.front
+              ? `${product.name} — ${color.name}, frente`
+              : product.imageAlt,
             color: color.name,
+            size,
             stock: color.stock,
-            quantity,
+            quantity: addedQuantity,
           },
         ];
       }
       return current.map((item) =>
-        item.id === product.id && item.color === color.name
-          ? { ...item, quantity: Math.min(item.stock, item.quantity + quantity) }
+        matchesVariant(item, product.id, color.name, size)
+          ? { ...item, quantity: item.quantity + addedQuantity }
           : item,
       );
     });
     setIsCartOpen(true);
   }
 
-  function changeCartQuantity(id, color, quantity) {
+  function changeCartQuantity(id, color, size, quantity) {
     setCart((current) =>
       current.map((item) =>
-        item.id === id && item.color === color
-          ? { ...item, quantity: Math.max(1, Math.min(item.stock, quantity)) }
+        matchesVariant(item, id, color, size)
+          ? { ...item, quantity: Math.max(1, Math.min(cartQuantityLimit(current, item), quantity)) }
           : item,
       ),
     );
   }
 
-  function removeFromCart(id, color) {
+  function removeFromCart(id, color, size) {
     setCart((current) =>
-      current.filter((item) => item.id !== id || item.color !== color),
+      current.filter((item) => !matchesVariant(item, id, color, size)),
     );
   }
 
   return (
-    <div className="site-shell">
-      <div className="announcement">
-        <span>PEÇAS ESCOLHIDAS COM CARINHO, SEPARADAS PRA VOCÊ</span>
-        <span className="announcement-right">Atendimento próximo, sempre <span>♡</span></span>
-      </div>
+    <div className="site-shell" id="inicio">
       <header className="site-header">
-        <a className="brand" href="#inicio" aria-label="entrelaço, início">
-          <span className="brand-mark">e</span>
-          <span>entrelaço<span className="brand-dot">.</span></span>
+        <a className="brand" href="#inicio" aria-label="queenmodas, início">
+          <span>queen<span className="brand-accent">modas</span></span>
         </a>
         <nav className="main-nav" aria-label="Navegação principal">
           <a className="nav-active" href="#colecao">A coleção</a>
-          <a href="#sobre">Nossa essência</a>
         </nav>
         <button
           type="button"
@@ -363,51 +417,9 @@ export default function App() {
       </header>
 
       <main>
-        <section className="hero" id="inicio">
-          <div className="hero-content">
-            <span className="eyebrow"><span className="eyebrow-line" /> MODA COM AFETO, DO SEU JEITO</span>
-            <h1>Vista o que<br />faz <em>sentido.</em></h1>
-            <p>Uma curadoria de peças para acompanhar seus dias — e celebrar quem você é, em cada detalhe.</p>
-            <a className="hero-link" href="#colecao">
-              Descubra a coleção <span><Icon name="arrow" size={17} /></span>
-            </a>
-            <div className="hero-note">
-              <span className="note-star">✳</span>
-              <span>Gostou? A gente separa<br />pra você pelo WhatsApp.</span>
-            </div>
-          </div>
-          <div className="hero-photo">
-            <img
-              src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1600&q=90"
-              alt="Amigas aproveitando um dia de compras juntas"
-            />
-            <div className="photo-caption"><span>01 / 03</span><span>Um jeito mais leve de escolher.</span></div>
-            <div className="photo-stamp"><span>feito<br />pra você</span><span className="stamp-heart">♡</span></div>
-          </div>
-          <div className="hero-index">COLEÇÃO  —  2026</div>
-        </section>
-
-        <section className="collection-section" id="colecao">
-          <div className="section-intro">
-            <div>
-              <span className="eyebrow"><span className="eyebrow-line" /> ESCOLHAS QUE CONTAM HISTÓRIAS</span>
-              <h2>Um pouco de <em>você</em><br />em cada peça.</h2>
-            </div>
-            <p>Peças especiais, cores que combinam com seu momento e aquele cuidado que faz toda diferença. Explore sem pressa.</p>
-          </div>
+        <section className="collection-section" id="colecao" aria-labelledby="catalog-title">
+          <h1 className="catalog-title" id="catalog-title">Roupas</h1>
           <div className="catalog-toolbar">
-            <div className="category-list" role="group" aria-label="Filtrar por categoria">
-              {categories.map((category) => (
-                <button
-                  type="button"
-                  key={category}
-                  className={`category-button ${activeCategory === category ? 'is-active' : ''}`}
-                  onClick={() => setActiveCategory(category)}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
             <div className="catalog-tools">
               <label className="search-field">
                 <Icon name="search" size={17} />
@@ -436,51 +448,36 @@ export default function App() {
           </div>
           <div className="results-caption">
             <span>{filteredProducts.length} {filteredProducts.length === 1 ? 'peça encontrada' : 'peças para descobrir'}</span>
-            <span className="results-detail">TOQUE NA COR PARA VER DISPONIBILIDADE</span>
+            <span className="results-detail">ESCOLHA A COR · PASSE O MOUSE NA FOTO PARA VER O VERSO</span>
           </div>
           {filteredProducts.length > 0 ? (
             <div className="product-grid">
               {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} onAdd={addToCart} />
+                <ProductCard key={product.id} product={product} items={cart} onAdd={addToCart} />
               ))}
             </div>
           ) : (
             <div className="no-results">
               <span>♡</span>
               <h3>Não encontramos essa peça.</h3>
-              <p>Tente outro nome ou escolha uma categoria diferente.</p>
+              <p>Tente buscar por outro nome ou cor.</p>
               <button
                 type="button"
                 className="text-button"
-                onClick={() => {
-                  setSearch('');
-                  setActiveCategory(categories[0]);
-                }}
+                onClick={() => setSearch('')}
               >
                 Ver todas as peças <Icon name="arrow" size={16} />
               </button>
             </div>
           )}
         </section>
-
-        <section className="experience-banner" id="sobre">
-          <div className="experience-icon">♡</div>
-          <div>
-            <span className="eyebrow">UMA EXPERIÊNCIA MAIS PESSOAL</span>
-            <h2>Você escolhe. A gente separa.<br /><em>Sem pressa, sem complicação.</em></h2>
-          </div>
-          <p>Monte sua seleção e chama a gente no WhatsApp. Confirmamos as cores, quantidades e todos os detalhes com você.</p>
-          <a href="#colecao" aria-label="Voltar para a coleção"><Icon name="arrow" size={20} /></a>
-        </section>
       </main>
 
       <footer className="site-footer">
-        <a className="brand footer-brand" href="#inicio">
-          <span className="brand-mark">e</span>
-          <span>entrelaço<span className="brand-dot">.</span></span>
+        <a className="brand footer-brand" href="#inicio" aria-label="queenmodas, início">
+          <span>queen<span className="brand-accent">modas</span></span>
         </a>
-        <p>Feito com carinho, para vestir a sua história.</p>
-        <span>© 2026 entrelaço. Todos os direitos reservados.</span>
+        <span>© 2026 queenmodas. Todos os direitos reservados.</span>
       </footer>
 
       {isCartOpen && (
